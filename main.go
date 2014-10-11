@@ -1,12 +1,49 @@
 package main
 
 import (
-	"fmt"
+	"html/template"
 	"net/http"
 	"os"
 
+	"github.com/codegangsta/negroni"
+	"github.com/gorilla/mux"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday"
+	"gopkg.in/unrolled/render.v1"
 )
+
+type Content struct {
+	Token    string
+	Markdown template.HTML
+}
+
+func FormHandler(rw http.ResponseWriter, req *http.Request, r *render.Render) {
+	content := &Content{
+		Token: req.URL.Query().Get("token"),
+	}
+
+	r.HTML(rw, http.StatusOK, "form", content)
+}
+
+func MarkdownHandler(rw http.ResponseWriter, req *http.Request, r *render.Render) {
+	markdown := blackfriday.MarkdownCommon([]byte(req.FormValue("body")))
+	parsedMarkdown := string(bluemonday.UGCPolicy().SanitizeBytes(markdown))
+
+	content := &Content{
+		Token:    req.URL.Query().Get("token"),
+		Markdown: template.HTML(parsedMarkdown),
+	}
+
+	r.HTML(rw, http.StatusOK, "markdown", content)
+}
+
+func AuthHandler(rw http.ResponseWriter, req *http.Request, next http.HandlerFunc) {
+	if req.URL.Query().Get("token") == "secret" {
+		next(rw, req)
+	} else {
+		http.Error(rw, "Not Authorized", http.StatusUnauthorized)
+	}
+}
 
 func main() {
 	port := os.Getenv("PORT")
@@ -14,13 +51,29 @@ func main() {
 		port = "8080"
 	}
 
-	fmt.Println("Starting Server on Port 8080")
-	http.HandleFunc("/markdown", GenerateMarkdown)
-	http.Handle("/", http.FileServer(http.Dir("public")))
-	http.ListenAndServe(":"+port, nil)
-}
+	r := render.New(render.Options{
+		Layout:     "base",
+		Extensions: []string{".html"},
+	})
 
-func GenerateMarkdown(rw http.ResponseWriter, r *http.Request) {
-	markdown := blackfriday.MarkdownCommon([]byte(r.FormValue("body")))
-	rw.Write(markdown)
+	n := negroni.New(
+		negroni.NewRecovery(),
+		negroni.NewLogger(),
+		negroni.NewStatic(http.Dir("public")),
+		negroni.HandlerFunc(AuthHandler),
+	)
+
+	router := mux.NewRouter()
+
+	router.HandleFunc("/", func(rw http.ResponseWriter, req *http.Request) {
+		FormHandler(rw, req, r)
+	})
+
+	router.HandleFunc("/markdown", func(rw http.ResponseWriter, req *http.Request) {
+		MarkdownHandler(rw, req, r)
+	}).Methods("POST")
+
+	n.UseHandler(router)
+
+	n.Run(":" + port)
 }

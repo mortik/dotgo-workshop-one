@@ -1,0 +1,15 @@
+<div class="page-title">
+  <h1>Markdown Generator</h1>
+  <p class="lead">Generate your markdown with Go</p>
+  <hr />
+</div>
+
+<form action="/markdown?token={{.Token}}" method="POST">
+  <div class="form-group">
+    <textarea class="form-control" name="body" cols="30" rows="10"></textarea>
+  </div>
+
+  <div class="form-group">
+    <input type="submit" class="btn btn-primary pull-right" />
+  </div>
+</form>
