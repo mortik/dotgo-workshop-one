@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"html/template"
 	"log"
 	"net/http"
@@ -12,8 +11,6 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday"
 	"gopkg.in/unrolled/render.v1"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type Content struct {
@@ -49,16 +46,6 @@ func AuthHandler(rw http.ResponseWriter, req *http.Request, next http.HandlerFun
 	}
 }
 
-func NewDB() *sql.DB {
-	db, err := sql.Open("sqlite3", "example.sqlite")
-	checkErr(err)
-
-	_, err = db.Exec("create table if not exists posts(title text, body text)")
-	checkErr(err)
-
-	return db
-}
-
 func checkErr(err error) {
 	if err != nil {
 		log.Fatalln(err)
@@ -66,8 +53,6 @@ func checkErr(err error) {
 }
 
 func main() {
-	NewDB()
-
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
