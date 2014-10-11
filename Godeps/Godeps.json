@@ -1,8 +1,0 @@
-{
-	"ImportPath": "_/Users/mortik/dev/lab/dotgo-workshop-one",
-	"GoVersion": "go1.3.3",
-	"Packages": [
-		"gopkg.in/unrolled/render.v1"
-	],
-	"Deps": []
-}
